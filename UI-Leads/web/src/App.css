@@ -1,0 +1,30 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1d2330; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e6e8ee; font-size: 14px; }
+th { background: #eef0f5; }
+.acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+button { padding: 5px 10px; border: 1px solid #3b5bdb; background: #3b5bdb; color: #fff; border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: wait; }
+button.secundario { background: #fff; color: #3b5bdb; }
+.estado { padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #e6e8ee; }
+.estado-nuevo { background: #d0ebff; }
+.estado-contactado { background: #fff3bf; }
+.estado-interesado { background: #ffe8cc; }
+.estado-convertido { background: #d3f9d8; }
+.estado-perdido { background: #ffe3e3; }
+.error { background: #ffe3e3; color: #a61e1e; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; }
+.error button { background: none; border: none; color: inherit; font-size: 18px; }
+.historial { margin-top: 24px; background: #fff; padding: 16px; border-radius: 8px; }
+.aviso { text-align: center; color: #667; padding: 24px; }
+.filtros { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.filtros input, .filtros select { padding: 6px 10px; border: 1px solid #ccd0da; border-radius: 6px; font-size: 14px; }
+.filtros input { flex: 1; max-width: 320px; }
+.filtros span { color: #667; font-size: 13px; }
+.formulario { background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+.formulario h2 { margin: 0 0 12px; font-size: 18px; }
+.formulario form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.formulario input, .formulario textarea { padding: 8px 10px; border: 1px solid #ccd0da; border-radius: 6px; font: inherit; }
+.formulario textarea { grid-column: 1 / -1; resize: vertical; }
+.formulario button { grid-column: 1 / -1; justify-self: start; }
+.exito { color: #2b8a3e; margin: 10px 0 0; }

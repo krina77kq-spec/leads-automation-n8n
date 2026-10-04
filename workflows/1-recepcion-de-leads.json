@@ -1,0 +1,184 @@
+{
+  "name": "1 - Seguimiento de leads (programado)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -688,
+        -160
+      ],
+      "id": "26c94eb9-edbf-4fe8-a05d-0446e6bab07f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.*\nFROM tbl_lead l,\n     LATERAL cambiar_estado(l.id_lead, 'perdido', 'schedule') r\nWHERE l.estado IN ('nuevo', 'contactado', 'interesado')\n  AND COALESCE(l.ultimo_contacto_at, l.fecha_creacion) < NOW() - INTERVAL '7 days';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -528,
+        -32
+      ],
+      "id": "08cc45f9-2c64-43b6-9182-ac675a0f007c",
+      "name": "Marcar perdidos",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE tbl_lead\nSET aviso_enviado_at = NOW()\nWHERE estado = 'nuevo'\n  AND aviso_enviado_at IS NULL\n  AND fecha_creacion < NOW() - INTERVAL '24 hours'\n  AND fecha_creacion >= NOW() - INTERVAL '7 days'\nRETURNING id_lead, nombre, correo, telefono, interes, producto_servicio, prioridad, fecha_creacion;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -528,
+        -192
+      ],
+      "id": "d6287ace-e9a6-488e-bfcc-84eba360f749",
+      "name": "Avisos",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "651be135-1467-4935-90cd-d33487a49eed",
+              "leftValue": "={{ $json.id_lead }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        -192
+      ],
+      "id": "55f87635-0124-4947-b4fb-636dc44a9a26",
+      "name": "¿Hay avisos?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "tucorreo@mail.com",
+        "toEmail": "tucorreo@mail.com",
+        "subject": "=  ⚠️ Lead sin contactar: {{ $json.nombre }}",
+        "emailFormat": "text",
+        "text": "=  Este lead lleva más de 24 horas sin contactar.\n\n  Nombre: {{ $json.nombre }}\n  Correo: {{ $json.correo }}\n  Teléfono: {{ $json.telefono }}\n  Interés: {{ $json.interes }}\n  Producto: {{ $json.producto_servicio }}\n  Urgencia: {{ $json.prioridad }}\n  Llegó hace: {{ Math.round((Date.now() - new Date($json.fecha_creacion)) / 3600000) }} horas\n\n  Contáctalo antes de que pase a \"perdido\" (a los 7 días).",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -272
+      ],
+      "id": "8375a03b-30e1-46f0-8798-056931ab6c31",
+      "name": "Enviar aviso",
+      "webhookId": "f6611566-33e8-4bd5-9b77-53580420647c",
+      "credentials": {
+        "smtp": {
+          "id": "cOQ99HKy3FCIJ1Hu",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Marcar perdidos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Avisos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar perdidos": {
+      "main": [
+        []
+      ]
+    },
+    "Avisos": {
+      "main": [
+        [
+          {
+            "node": "¿Hay avisos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay avisos?": {
+      "main": [
+        [
+          {
+            "node": "Enviar aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "21bed524-e818-41e5-b811-75fd4c9efa5c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "12a3238dc980938b038e81eb1fdfc47cf854923f12009098a4fd27d1c05271d4"
+  },
+  "nodeGroups": [],
+  "id": "w6Dd95iOyU9E5brm",
+  "tags": []
+}

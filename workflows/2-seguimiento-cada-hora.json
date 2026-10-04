@@ -1,0 +1,363 @@
+{
+  "name": "2 - Automatización de Leads",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "632d3cf4-8c1e-449a-8d26-3cd5cd123965",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        -448
+      ],
+      "id": "b08ebc51-3f18-4396-aabf-c6e93e8aa3dc",
+      "name": "Webhook",
+      "webhookId": "632d3cf4-8c1e-449a-8d26-3cd5cd123965"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "92647239-1653-46e8-adc5-4bb0d2030edb",
+              "leftValue": "={{ $json.body.nombre }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "49776e90-04fc-4046-9a2f-948279b01246",
+              "leftValue": "={{ $json.body.correo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4a67ee56-3fd5-4e17-9b07-a84a009dd15c",
+              "leftValue": "={{ $json.body.mensaje }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -720,
+        -448
+      ],
+      "id": "af73317f-eec7-48fe-ae2d-93ded6e84012",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"mensaje\": \"Faltan campos obligatorios\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -560,
+        -368
+      ],
+      "id": "dca633b7-114b-46ef-9b1e-da2c9f63a704",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO tbl_lead (nombre, correo, telefono, mensaje_original, interes, producto_servicio, prioridad)\nVALUES ($1, $2, $3, $4, $5, $6, $7)\nON CONFLICT (correo) DO UPDATE SET\n  nombre = EXCLUDED.nombre,\n  telefono = EXCLUDED.telefono,\n  mensaje_original = EXCLUDED.mensaje_original,\n  interes = COALESCE(EXCLUDED.interes, tbl_lead.interes),\n  producto_servicio = CASE\n      WHEN EXCLUDED.producto_servicio IS NULL OR EXCLUDED.producto_servicio = 'otro'\n      THEN tbl_lead.producto_servicio\n      ELSE EXCLUDED.producto_servicio END,\n  prioridad = COALESCE(EXCLUDED.prioridad, tbl_lead.prioridad),\n  updated_at = NOW()\nRETURNING *, (xmax = 0) AS es_nuevo;",
+        "options": {
+          "queryReplacement": "={{ [$json.nombre, $json.correo, $json.telefono, $json.mensaje_original, $json.interes, $json.producto_servicio, $json.prioridad] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -208,
+        -576
+      ],
+      "id": "0d34ba55-4f8b-4a4d-9ba2-08a9956220e1",
+      "name": "Upsert lead",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "16a3a82e-1199-42e6-a0af-c4e67c0497b0",
+              "leftValue": "={{ $json.es_nuevo }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -64,
+        -576
+      ],
+      "id": "78de4386-bbc0-4b9f-9a01-6aae0f0b2de6",
+      "name": "es_nuevo"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO tbl_lead_historial (id_lead, estado_anterior, estado_nuevo, origen)\nVALUES ($1, NULL, 'nuevo', 'webhook');",
+        "options": {
+          "queryReplacement": "={{ $json.id_lead }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        96,
+        -656
+      ],
+      "id": "70d56412-f947-409b-af48-cbdef28231b5",
+      "name": "Insert lead nuevo",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  systemInstruction: {\n    parts: [{ text: `Eres un asistente que clasifica mensajes de personas interesadas en una agencia de marketing digital y automatizaciones con IA para emprendedores.\n\nAnaliza el mensaje y devuelve únicamente el JSON pedido.\nSiempre debes devolver los tres campos con un valor de la lista permitida.\nSi el mensaje es ambiguo, vago o solo un saludo, usa interes \"bajo\",\nprioridad \"baja\" y producto_servicio \"otro\". Nunca dejes un campo vacío.\n\nReglas:\n- interes: \"alto\" si pregunta precios, pide cotización o quiere contratar; \"medio\" si pide información o describe un problema; \"bajo\" si el mensaje es genérico o no dice qué quiere.\n- producto_servicio: el servicio que mejor encaja. Si no se puede saber, \"otro\".\n- prioridad: \"alta\" si menciona una fecha límite o urgencia explícita; \"media\" si hay necesidad clara sin fecha; \"baja\" en cualquier otro caso.\n- No inventes información que no esté en el mensaje.` }]\n  },\n  contents: [{\n    parts: [{ text: \"Mensaje: \" + ($json.body?.mensaje ?? \"\") }]\n  }],\n  generationConfig: {\n    responseMimeType: \"application/json\",\n    responseSchema: {\n\"required\": [\"interes\", \"prioridad\", \"producto_servicio\"],\n      type: \"OBJECT\",\n      properties: {\n        interes: { type: \"STRING\", enum: [\"alto\", \"medio\", \"bajo\"] },\n        producto_servicio: { type: \"STRING\", enum: [\"automatizacion_ia\", \"chatbots_atencion\", \"marketing_redes\", \"publicidad_pagada\", \"web_embudos\", \"consultoria\", \"otro\"] },\n        prioridad: { type: \"STRING\", enum: [\"alta\", \"media\", \"baja\"] }\n      },\n      required: [\"interes\", \"producto_servicio\", \"prioridad\"]\n    }\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -544,
+        -576
+      ],
+      "id": "e0a8dc87-e3ae-4b48-9e46-41da0de8810c",
+      "name": "HTTP Request GEMINI",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hJBIW385imqF6Q3W",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Webhook').first().json.body ?? $('Webhook').first().json;\nlet clasif = {};\ntry {\n  const raw = $input.first().json;\n  const texto = raw.candidates?.[0]?.content?.parts?.[0]?.text;\n  clasif = texto ? JSON.parse(texto) : {};\n} catch (e) { clasif = {}; }\n\nconst validos = {\n  interes: ['alto','medio','bajo'],\n  prioridad: ['alta','media','baja'],\n  producto_servicio: ['automatizacion_ia','chatbots_atencion','marketing_redes',\n                      'publicidad_pagada','web_embudos','consultoria','otro']\n};\nconst limpio = (campo) => validos[campo].includes(clasif[campo]) ? clasif[campo] : null;\n\nreturn [{ json: {\n  ...lead,\n  mensaje_original: lead.mensaje,\n  interes: limpio('interes'),\n  producto_servicio: limpio('producto_servicio'),\n  prioridad: limpio('prioridad')\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        -576
+      ],
+      "id": "81c7dd09-b06b-416c-83cc-db8564ac9a61",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.*\nFROM tbl_lead l,\n     LATERAL cambiar_estado(l.id_lead, 'interesado', 'ia') r\nWHERE l.id_lead = $1\n  AND l.estado = 'contactado'\n  AND $2::text = 'alto'\n  AND $3::text = 'contactado';",
+        "options": {
+          "queryReplacement": "={{ [ $json.id_lead,$json.interes ,$json.estado ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        112,
+        -240
+      ],
+      "id": "3c8e22d4-00cb-4330-91e1-9ecebfe3df5d",
+      "name": "Lead sube a interesado (ia)",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT cambiar_estado(\n  id_lead,\n  CASE estado WHEN 'convertido' THEN 'interesado' WHEN 'perdido' THEN 'contactado' END,\n  'reescribio'\n)\nFROM tbl_lead\nWHERE id_lead = $1 AND estado IN ('convertido', 'perdido');",
+        "options": {
+          "queryReplacement": "={{ $json.id_lead }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        112,
+        -448
+      ],
+      "id": "2e12fab6-3364-4cbb-b695-51246e6c9bb3",
+      "name": "Lead reescribe (reescribio)",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request GEMINI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert lead": {
+      "main": [
+        [
+          {
+            "node": "es_nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "es_nuevo": {
+      "main": [
+        [
+          {
+            "node": "Insert lead nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lead reescribe (reescribio)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lead sube a interesado (ia)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request GEMINI": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Upsert lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "811b95b2-0f21-4532-8b2f-0df2b256171f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "12a3238dc980938b038e81eb1fdfc47cf854923f12009098a4fd27d1c05271d4"
+  },
+  "nodeGroups": [],
+  "id": "uDZP2zTVxwrNQdEx",
+  "tags": []
+}

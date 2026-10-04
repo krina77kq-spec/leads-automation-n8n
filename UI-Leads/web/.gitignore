@@ -1,0 +1,21 @@
+# Variables de entorno reales (los .example sí se suben)
+.env
+.env.*
+!.env.example
+
+# Dependencias y builds
+node_modules/
+dist/
+
+# Datos locales de Docker, si usas volúmenes en carpetas
+pgdata/
+n8n_data/
+
+# Exports con datos reales
+*.dump
+*.backup
+
+# Sistema y editor
+.DS_Store
+Thumbs.db
+*.log

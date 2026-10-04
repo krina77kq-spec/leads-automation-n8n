@@ -1,0 +1,247 @@
+{
+  "name": "4 - Enviar borrador aprobado",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enviar-borrador",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        -208
+      ],
+      "id": "1aa68f3d-4012-48a7-8395-c28b68a8463b",
+      "name": "Webhook",
+      "webhookId": "cffc257d-1101-4c68-b436-273499f80ec9",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "judofGlQXddH2c4B",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "tu-correo@ejemplo.com",
+        "toEmail": "={{ $json.correo }}",
+        "subject": "={{ $json.asunto }}",
+        "emailFormat": "text",
+        "text": "={{ $json.cuerpo }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        96,
+        -240
+      ],
+      "id": "a5dac5a0-7bb2-4f82-bbeb-27ff332248f5",
+      "name": "Send an Email",
+      "webhookId": "d5660bea-ca1f-4477-a6a0-1de5b8c83970",
+      "credentials": {
+        "smtp": {
+          "id": "cOQ99HKy3FCIJ1Hu",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE tbl_borrador b\nSET estado = 'aprobado', resuelto_en = now()\nFROM tbl_lead l\nWHERE b.id_borrador = $1\n  AND b.estado = 'pendiente'\n  AND l.id_lead = b.id_lead\nRETURNING b.id_borrador, b.id_lead, b.asunto, b.cuerpo, l.correo, l.nombre;",
+        "options": {
+          "queryReplacement": "={{ [ $json.body.id_borrador ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -384,
+        -208
+      ],
+      "id": "ecd988bf-5122-43aa-aef9-8ee2730c0f13",
+      "name": "Reclamar borrador",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH b AS (\n  UPDATE tbl_borrador SET enviado_en = now()\n  WHERE id_borrador = $1\n  RETURNING id_lead\n)\nUPDATE tbl_lead\nSET ultimo_contacto_at = now()\nFROM b\nWHERE tbl_lead.id_lead = b.id_lead\nRETURNING tbl_lead.id_lead, tbl_lead.ultimo_contacto_at;",
+        "options": {
+          "queryReplacement": "={{ [ $('Reclamar borrador').item.json.id_borrador ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        320,
+        -208
+      ],
+      "id": "4556195d-bd44-4930-abf2-2c8e95ae8926",
+      "name": "Marcar enviado",
+      "credentials": {
+        "postgres": {
+          "id": "ZJwbCZY1iaEIxQn1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        544,
+        -208
+      ],
+      "id": "6360dfd7-ae89-46a6-a520-aad10baa6a6c",
+      "name": "Respond ok"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false }",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        -48
+      ],
+      "id": "a7270ab7-291d-4432-9764-2a5bfa689e9d",
+      "name": "Respond 404"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "55b7e810-d16a-4245-bfad-966135deae52",
+              "leftValue": "={{ $json.id_borrador }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -160,
+        -208
+      ],
+      "id": "b046f772-a5d8-4a36-8e89-e72b1b6d567e",
+      "name": "¿Borrador reclamado?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Reclamar borrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an Email": {
+      "main": [
+        [
+          {
+            "node": "Marcar enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reclamar borrador": {
+      "main": [
+        [
+          {
+            "node": "¿Borrador reclamado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar enviado": {
+      "main": [
+        [
+          {
+            "node": "Respond ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Borrador reclamado?": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 404",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b87745ea-cc2e-4b9a-9e46-7bf62ee6b7cb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "12a3238dc980938b038e81eb1fdfc47cf854923f12009098a4fd27d1c05271d4"
+  },
+  "nodeGroups": [],
+  "id": "QgKk1kQ6d9ugl80i",
+  "tags": []
+}
