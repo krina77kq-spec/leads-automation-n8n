@@ -32,6 +32,28 @@ flowchart LR
     W4 --> DB
 ```
 
+## Capturas
+
+### Panel de leads
+![Panel de leads](docs/panel-leads.png)
+
+### Panel de crear/buscar leads
+![Panel de leads crear y buscar](docs/panel-crearbuscar.png)
+
+### Historial de un lead (los cinco orígenes)
+![Historial de un lead](docs/historial.png)
+
+### Borradores pendientes de aprobación
+![Borradores pendientes](docs/borradores.png)
+
+### Workflow agente de seguimiento
+![Workflow 3: agente de seguimiento](docs/workflow3.png)
+
+### Workflow enviar borrador aprobado
+![Workflow 4: enviar borrador](docs/workflow4.png)
+
+
+
 ## Máquina de estados de un lead
 
 ```mermaid

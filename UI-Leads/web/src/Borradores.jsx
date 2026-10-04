@@ -52,10 +52,13 @@ export default function Borradores() {
             <p><b>Asunto:</b> {b.asunto}</p>
             <pre style={{ whiteSpace: 'pre-wrap' }}>{b.cuerpo}</pre>
 
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
             <button disabled={enviando === b.id_borrador} onClick={() => aprobarYEnviar(b)}>
-            {enviando === b.id_borrador ? 'Enviando...' : 'Aprobar y enviar'}
-            </button>
-            <button onClick={() => decidir(b.id_borrador, 'descartado')}>Descartar</button>
+                        {enviando === b.id_borrador ? 'Enviando...' : 'Aprobar y enviar'}
+                        </button>
+                        <button onClick={() => decidir(b.id_borrador, 'descartado')}>Descartar</button>
+            </div>
+           
         </article>
         ))}
     </section>
